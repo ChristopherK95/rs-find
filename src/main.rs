@@ -1,8 +1,9 @@
 use std::{
     env,
+    ffi::OsString,
     fs::{self},
     io,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 fn main() -> io::Result<()> {
@@ -24,36 +25,33 @@ fn iterate_dir(path: &Path, search: String) -> io::Result<()> {
             let new_path = entry.path();
             match new_path.file_name() {
                 Some(path_string) => {
-                    if path_string.to_str().unwrap().chars().nth(0).unwrap() == '.' {
+                    if path.starts_with(".") {
                         continue;
                     }
                     if path_string == "node_modules" {
                         continue;
                     }
                 }
-                None => {}
+                None => continue
             }
             if new_path.is_dir() {
-                let read_only = new_path.metadata().unwrap().permissions().readonly();
-                if read_only {
-                    continue;
+                if !is_read_only(&new_path) {
+                    iterate_dir(&new_path, search.to_string())?;
                 };
-                iterate_dir(&new_path, search.to_string())?;
             } else {
-                match entry.file_name().to_str() {
-                    Some(e) => {
-                        if e == search {
-                            match new_path.to_str() {
-                                Some(path) => println!("{}", path),
-                                None => {}
-                            };
-                        }
-                    }
-                    _ => {}
+                if entry.file_name() == OsString::from(&search) {
+                    println!("{:?}", new_path);
                 }
             }
         }
     }
 
     Ok(())
+}
+
+fn is_read_only(path_buf: &PathBuf) -> bool {
+    match path_buf.metadata() {
+        Ok(metadata) => metadata.permissions().readonly(),
+        Err(..) => return true,
+    }
 }
