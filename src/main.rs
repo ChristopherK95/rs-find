@@ -21,28 +21,27 @@ fn main() -> io::Result<()> {
 
 fn iterate_dir(path: &Path, search: String) -> io::Result<()> {
     for entry in fs::read_dir(path)? {
-        if let Ok(entry) = entry {
-            let new_path = entry.path();
-            match new_path.file_name() {
-                Some(path_string) => {
-                    if path.starts_with(".") {
-                        continue;
+        match entry {
+            Ok(entry) => {
+                let new_path = entry.path();
+                match new_path.file_name() {
+                    Some(path_string) => {
+                        if path.starts_with(".") {
+                            continue;
+                        }
+                        if path_string == "node_modules" {
+                            continue;
+                        }
                     }
-                    if path_string == "node_modules" {
-                        continue;
-                    }
+                    None => continue,
                 }
-                None => continue
-            }
-            if new_path.is_dir() {
-                if !is_read_only(&new_path) {
+                if new_path.is_dir() && !is_read_only(&new_path) {
                     iterate_dir(&new_path, search.to_string())?;
-                };
-            } else {
-                if entry.file_name() == OsString::from(&search) {
+                } else if entry.file_name() == OsString::from(&search) {
                     println!("{:?}", new_path);
                 }
-            }
+            },
+            Err(err) => println!("{}", err)
         }
     }
 
